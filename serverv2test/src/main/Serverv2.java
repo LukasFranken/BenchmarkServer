@@ -40,7 +40,7 @@ public class Serverv2 extends javax.swing.JFrame {
 				isReader = new ObjectInputStream(sock.getInputStream());
 			} 
 			catch (Exception ex) {
-				outputPane.append("Error beginning StreamReader. \n");
+				outputPane.append("* Error beginning StreamReader. \n");
 			} 
 			
 			client.setPipeType("unvalidated");
@@ -56,7 +56,7 @@ public class Serverv2 extends javax.swing.JFrame {
 				while(isReader.readObject() != null){
 					try{
 						message = (String) isReader.readObject();
-						outputPane.append("\n" + message);
+						outputPane.append("\n# " + message);
 						System.out.println("message received:" + message);
 						if(message.startsWith("!")){
 							System.out.println("command triggered");
@@ -70,6 +70,7 @@ public class Serverv2 extends javax.swing.JFrame {
 									
 									userData = loginSuccess.split(" ");
 									
+									System.out.println("userADD: " + userData[0] + " " + userData[1]);
 									userAdd(userData[0] + " " + userData[1]);
 									client.setUsername(userData[0]);
 									client.setPipeType(userData[1]);
@@ -85,7 +86,7 @@ public class Serverv2 extends javax.swing.JFrame {
 						}
 						
 					}catch(ClassNotFoundException classNotFoundException){
-						outputPane.append("\n idk wtf that user sent!");
+						outputPane.append("\n * idk wtf that user sent!");
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -96,53 +97,11 @@ public class Serverv2 extends javax.swing.JFrame {
 				System.out.println("\n user: " + currentUser + " disconnected1.");
 				e.printStackTrace();
 			} catch (IOException e) {
-				outputPane.append("User removed: " + currentUser);
+				outputPane.append("* User removed: " + currentUser);
 				userRemove(client.getUsername() + " " + client.getPipeType());
 				System.out.println("\n user: " + currentUser + " disconnected2.");
 				e.printStackTrace();
 			}
-		
-			
-                /*        String message, connect = "Connect", disconnect = "Disconnect", chat = "Chat" ;
-			String[] data;
-
-			try {
-				while ((message = reader.readLine()) != null) {
-
-					outputPane.append("Received: " + message + "\n");
-					data = message.split(":");
-                                        for (String token:data) {
-
-                                        outputPane.append(token + "\n");
-
-                                        }
-
-                                        if (data[2].equals(connect)) {
-                                        	
-                                                tellEveryone((data[0] + ":" + data[1] + ":" + chat));
-                                                userAdd(data[0]);
-
-					} else if (data[2].equals(disconnect)) {
-
-                                            tellEveryone((data[0] + ":has disconnected." + ":" + chat));
-                                            userRemove(data[0]);
-
-					} else if (data[2].equals(chat)) {
-
-                                            tellEveryone(message);
-
-					} else {
-                                            outputPane.append("No Conditions were met. \n");
-                                        }
-
-
-			     }
-			} 
-			catch (Exception ex) {
-				outputPane.append("Lost a connection. \n");
-                                ex.printStackTrace();
-                                clientOutputStreams.remove(client);
-			} */
 		} 
 	}
                         
@@ -212,35 +171,38 @@ public class Serverv2 extends javax.swing.JFrame {
         Thread starter = new Thread(new ServerStart());
         starter.start();
 
-        outputPane.append("Server started at port: " + dbhandler.globalPort + "\n");
+        outputPane.append("* Server started at port: " + dbhandler.globalPort + "\n");
     }                                           
 
     private void stopButtonActionPerformed(ActionEvent evt) {                                           
 
-        tellEveryone("Server:is stopping and all users will be disconnected.\n:Chat");
-        outputPane.append("Server stopping... \n");
+        tellEveryone("Server: is stopping and all users will be disconnected.\n:Chat");
+        outputPane.append("* Server stopping... \n");
 
     }    
     
 	private void setupDatabase(){
-		outputPane.append("Database-check initiated. \n");
-		dbhandler.callData();
-		dbhandler.getPort();
-		if(dbhandler.gotData && !dbhandler.isConnectedToDB ){
-			outputPane.append("Server found existing Database-data at: " + dbhandler.postProcessDefPath + "! \n");
-		}else if(dbhandler.postProcessDefPath.equals("lulpath")){
-			outputPane.append("DB-Error: default initiation. Please call support from the developer to continue.\n");
+		
+		String databaseCheck = dbhandler.callData();
+		
+		if(databaseCheck.equals("")){
+			databaseCheck = " No problems detected.";
 		}
 		
-		else{
-			outputPane.append("Server Database-initialization requested. \n");
-			dbhandler.initData(temppath);
-			outputPane.append("DB-Error: default initiation. Please call support from the developer to continue.\n");
+		outputPane.append("* Database check returned:" + databaseCheck + "\n");
+		
+		if(databaseCheck.startsWith("- dbinitvar")){
+			databaseCheck = dbhandler.callData();
+			if(databaseCheck.equals("")){
+				databaseCheck = " No problems detected.";
+			}
+			outputPane.append("* Reinitialized Database check returned:" + databaseCheck + "\n");
 		}
-		if(dbhandler.noRegDataPort){
-			outputPane.append("No defined port found. Using default port: " + dbhandler.globalPort + "\n");
+		
+		if(dbhandler.isConnectedToDB){
+			outputPane.append("* Server connected successfully to existing Database at: " + dbhandler.postProcessDefPath + "! \n");
 		}else{
-			outputPane.append("Defined port detected. Using custom port: " + dbhandler.globalPort + "\n");
+			outputPane.append("* DB-Error: Connection to Database failed.\n");
 		}
 
 	}
@@ -325,7 +287,7 @@ public class Serverv2 extends javax.swing.JFrame {
 			try {
 				LabeledObjectOutputStream OstreamTemp = (LabeledObjectOutputStream) it.next();
 				OstreamTemp.writeObject(message);
-				outputPane.append("Sending to all: " + message + "\n");
+				outputPane.append("\nSending to all: " + message + "\n");
                                 OstreamTemp.flush();
                                 outputPane.setCaretPosition(outputPane.getDocument().getLength());
 
@@ -367,7 +329,6 @@ public class Serverv2 extends javax.swing.JFrame {
 			path = command.split(" ");
 			System.out.println(path[1]);
 			dbhandler.setDefaultDBPath(path[1]);
-			dbhandler.createDBDirectory(path[1]);
 			outputPane.append("Directory created! ");
 		}
 		
@@ -409,28 +370,6 @@ public class Serverv2 extends javax.swing.JFrame {
 			}
 		}
 		
-		if(command.startsWith("!createAdmin")){
-			String[] username;
-			username = command.split(" ");
-			if(dbhandler.checkUser(username[1])){
-				outputPane.append("\n User already exists.");
-			}else{
-				
-				int[] extractedPass = new int[username.length-2];
-				
-				for(int i = 0; i < extractedPass.length; i++){
-					extractedPass[i] = Integer.parseInt(username[i+2]);
-					System.out.println(extractedPass[i]);
-				}
-				
-				if(dbhandler.createAdmin(username[1], extractedPass)){
-					outputPane.append("\n Admin successfully added to the Database.");
-				}else{
-					outputPane.append("\n Error: Admin could not be added to the Filesystem.");
-				}
-			}
-		}
-		
 		if(command.startsWith("!createUser")){
 			String[] username;
 			username = command.split(" ");
@@ -438,13 +377,14 @@ public class Serverv2 extends javax.swing.JFrame {
 				outputPane.append("\n User already exists.");
 			}else{
 				
+				String name = username[1];
 				String pass = username[2];
+				String priviledge = username[3];
 				
-				
-				if(dbhandler.createUser(username[1], pass)){
-					outputPane.append("\n User successfully added to the Database.");
+				if(dbhandler.createUser(name, pass, priviledge)){
+					outputPane.append("\n* User successfully added to the Database.");
 				}else{
-					outputPane.append("\n Error: User could not be added to the Filesystem.");
+					outputPane.append("\n* Error: User could not be added to the Database.");
 				}
 			}
 		}
@@ -498,47 +438,22 @@ public class Serverv2 extends javax.swing.JFrame {
 			String[] username;
 			username = command.split(" ");
 			if(!dbhandler.checkUser(username[1])){
-				outputPane.append("\n User doesn't exist.");
+				outputPane.append("\n* User doesn't exist.");
 				sendMessage("!invalidUser", userStream);
 			}else{
 				
-			if(username[2].startsWith("admin")){
-				int[] extractedPass = new int[username.length-3];
-				
-				for(int i = 0; i < extractedPass.length; i++){
-					System.out.println("admin login triggered with message recieved:" + command);
-					extractedPass[i] = Integer.parseInt(username[i+3]);
-					System.out.println(extractedPass[i]);
-				}
-				
-				if(dbhandler.loginAdmin(username[1], extractedPass)){
-					if(!isOnlineClient(username[1])){
-						outputPane.append("\n Admin successfully logged in.");
-						sendMessage("!SuccessfulAdminLogin: " + username[1] , userStream);
-						accepted = username[1] + " Admin";
-					}else{
-						sendMessage("!isOnline: " + username[1] , userStream);
-					}
-					
-				}else{
-					sendMessage("!wrongPass", userStream);
-					outputPane.append("\n Error: Admin Password wrong.");
-				}
-			}else{
-				
 				if(dbhandler.loginUser(username[1], username[3])){
-					outputPane.append("\n User " + username[1] + " successfully logged in.");
-					sendMessage("!SuccessfulUserLogin: " + username[1], userStream);
-					accepted = username[1] + " User";
+					outputPane.append("\n* User " + username[1] + " successfully logged in.");
+					accepted = username[1] + " " + dbhandler.getUserPriviledges(username[1]);
+					sendMessage("!SuccessfulUserLogin: " + accepted, userStream);
 				}else{
 					sendMessage("!wrongPass", userStream);
-					outputPane.append("\n Error: User Password wrong.");
+					outputPane.append("\n* Error: User Password wrong.");
 				}
-				
-			}
+
 			}
 			
-				return accepted;
+		return accepted;
 
     }
                  
