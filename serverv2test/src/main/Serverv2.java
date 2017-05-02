@@ -21,12 +21,13 @@ public class Serverv2 extends javax.swing.JFrame {
     
     DBHandler dbhandler = new DBHandler();
 	
-	ArrayList clientOutputStreams;
+	ArrayList<LabeledObjectOutputStream> clientOutputStreams;
     ArrayList<String> onlineUsers;
     ArrayList<String> node;
 
 	public class ClientHandler implements Runnable	{
-		String currentUser; 
+		Boolean isOnline = true;
+		String currentUser = "unnamed"; 
 		ObjectInputStream isReader;
 		Socket sock;
         LabeledObjectOutputStream client;
@@ -50,10 +51,18 @@ public class Serverv2 extends javax.swing.JFrame {
 
 		public void run() {
 			
+			
 			String message = " You are now Connected! \n";
-			sendMessage(message, client);
+			
 			try {
-				while(isReader.readObject() != null){
+				sendMessage(message, client);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			try {
+				while(isReader.readObject() != null && isOnline){
 					try{
 						message = (String) isReader.readObject();
 						outputPane.append("\n# " + message);
@@ -62,7 +71,7 @@ public class Serverv2 extends javax.swing.JFrame {
 							System.out.println("command triggered");
 							if(message.startsWith("!login")){
 								
-								// turn bool into strign with currentUSer
+								// turn bool into strign with currentUser
 								String loginSuccess = "nope";
 								String userData[];
 								loginSuccess = operateLogin(message, client);
@@ -74,7 +83,6 @@ public class Serverv2 extends javax.swing.JFrame {
 									userAdd(userData[0] + " " + userData[1]);
 									client.setUsername(userData[0]);
 									client.setPipeType(userData[1]);
-									
 									
 									
 								}
@@ -97,13 +105,14 @@ public class Serverv2 extends javax.swing.JFrame {
 				System.out.println("\n user: " + currentUser + " disconnected1.");
 				e.printStackTrace();
 			} catch (IOException e) {
-				outputPane.append("* User removed: " + currentUser);
+				outputPane.append("* User removed: " + client.getUsername());
 				userRemove(client.getUsername() + " " + client.getPipeType());
 				System.out.println("\n user: " + currentUser + " disconnected2.");
 				e.printStackTrace();
 			}
 		} 
 	}
+	
                         
     public Serverv2() {
 
@@ -216,6 +225,40 @@ public class Serverv2 extends javax.swing.JFrame {
     }
 
 
+	public class OnlineChecker implements Runnable{
+		LabeledObjectOutputStream client;
+		
+		public OnlineChecker(LabeledObjectOutputStream user){
+			this.client = user;
+		}
+		
+		public void run(){
+			double startMS = System.currentTimeMillis();
+			double currentMS = startMS;
+			
+			while(true){
+				currentMS = System.currentTimeMillis();
+				if(currentMS - startMS > 5000){
+					
+					try {
+						sendMessage("check to: " + client.getUsername(), client);
+					} catch (IOException e) {
+						userRemove(client.getUsername());
+						clientOutputStreams.remove(client);
+						System.out.println("user didnt respond on checkmsg: " + client.getUsername());
+						e.printStackTrace();
+						break;
+					}
+					
+					System.out.println("check sent");
+					
+					startMS = currentMS;
+				}
+			}
+		}
+
+	}
+    
     public class ServerStart implements Runnable {
         public void run() {
                     clientOutputStreams = new ArrayList();
@@ -232,15 +275,17 @@ public class Serverv2 extends javax.swing.JFrame {
 				clientOutputStreams.add(Ostream);
 
 
-				Thread listener = new Thread(new ClientHandler(clientSock, Ostream));
-				listener.start();
+				Thread clientHandler = new Thread(new ClientHandler(clientSock, Ostream));
+				Thread clientChecker = new Thread(new OnlineChecker(Ostream));
+				clientHandler.start();
+				clientChecker.start();
 				outputPane.append("Got a connection. \n");
 			} 
 		} 
 		catch (Exception ex)
 		{
 			outputPane.append("Error making a connection. \n");
-		} 
+		}
 
 	}
     }
@@ -298,30 +343,23 @@ public class Serverv2 extends javax.swing.JFrame {
 		} 
 	}
      
-    public void sendMessage(String message, LabeledObjectOutputStream userStream){
+    public void sendMessage(String message, LabeledObjectOutputStream userStream) throws IOException, SocketException{
     	
-    	
-    	
-    	try {
-			userStream.writeObject(message);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	outputPane.append("Sending to user: " + message + "\n");
-    	try {
-			userStream.flush();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		userStream.writeObject(message);
+    	outputPane.append("\nSending to user: " + message);
+		userStream.flush();
     	
     }
     
     private void operateCommand(String command, LabeledObjectOutputStream userStream){
 		
 		if(command.equals("!respond")){
-			sendMessage("Server responds successfully.", userStream);
+			try {
+				sendMessage("Server responds successfully.", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		if(command.startsWith("!createDirectory")){
@@ -347,11 +385,26 @@ public class Serverv2 extends javax.swing.JFrame {
 			if(dbhandler.checkTable(tablename[1])){
 				outputPane.append("\n Table already exists. If you want to overwrite an existing table, please use the !overwriteTable command. Table not created.");
 			}else{
-				if(dbhandler.createTable(tablename[1])){
+				ArrayList<String> columns = new ArrayList<String>();
+				for(int i = 3; i < tablename.length; i++){
+					columns.add(tablename[i]);
+				}
+				if(dbhandler.createTable(tablename[1], tablename[2], columns)){
 					outputPane.append("\n Table successfully added to the Database.");
 				}else{
 					outputPane.append("\n Error: Table could not be added to the Filesystem.");
 				}
+			}
+		}
+		
+		if(command.startsWith("!createSubfolder")){
+			String[] subfolderName;
+			subfolderName = command.split(" ");
+			boolean existed = dbhandler.createSubfolder(subfolderName[1]);
+			if(existed){
+				outputPane.append("subfolder already exists: " + subfolderName[1] + "!");
+			}else{
+				outputPane.append("successfully created subfolder " + subfolderName[1] + "!");
 			}
 		}
 		
@@ -439,15 +492,30 @@ public class Serverv2 extends javax.swing.JFrame {
 			username = command.split(" ");
 			if(!dbhandler.checkUser(username[1])){
 				outputPane.append("\n* User doesn't exist.");
-				sendMessage("!invalidUser", userStream);
+				try {
+					sendMessage("!invalidUser", userStream);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}else{
 				
 				if(dbhandler.loginUser(username[1], username[3])){
 					outputPane.append("\n* User " + username[1] + " successfully logged in.");
 					accepted = username[1] + " " + dbhandler.getUserPriviledges(username[1]);
-					sendMessage("!SuccessfulUserLogin: " + accepted, userStream);
+					try {
+						sendMessage("!SuccessfulUserLogin: " + accepted, userStream);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}else{
-					sendMessage("!wrongPass", userStream);
+					try {
+						sendMessage("!wrongPass", userStream);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					outputPane.append("\n* Error: User Password wrong.");
 				}
 

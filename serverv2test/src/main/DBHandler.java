@@ -101,6 +101,11 @@ public class DBHandler {
 				returnMessage += "- userdata Table not found. Created new one.";
 			}
 			
+			if(!checkTable("tabledata")){
+				createCatTable();
+				returnMessage += "- Category Table not found. Created new one.";
+			}
+			
 		}
 		
 		return returnMessage;
@@ -137,6 +142,30 @@ public class DBHandler {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private void createCatTable(){
+		
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE TABLEDATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " folder VARCHAR(255), ";
+		    
+		    for(int i = 0; i <= 30; i++){
+		    	sql += "subfolder"+i+" VARCHAR(255), ";
+		    }
+		    
+		    sql += " PRIMARY KEY ( ID ))"; 
+	        System.out.println(sql);
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public String getPort(){
@@ -210,9 +239,88 @@ public class DBHandler {
 	}
 	
 	//Obsolete
-	public boolean createTable(String tablename){
+	public boolean createTable(String tablename, String subfoldername,  ArrayList<String> columns){
+		boolean tableExists = checkTable(tablename);
 		
-		//create a table file in database
+		if(!tableExists){
+			try {
+				Statement statement = con.createStatement();
+				
+			    String sql = "CREATE TABLE " + tablename + " " +
+		                     "(ID INTEGER not NULL AUTO_INCREMENT, ";
+			    
+			    for(int i = 0; i < columns.size(); i++){
+			    	sql += " "+ columns.get(i) + " VARCHAR(255), ";
+			    }
+			    
+			    sql += " PRIMARY KEY ( ID ))"; 
+		        System.out.println(sql);
+				
+				int result = statement.executeUpdate(sql);
+				System.out.println("table didnt exist. created new one.");
+
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
+		boolean exists = createSubfolder(subfoldername);
+		if(exists){
+			String tempString = "";
+			int sfid = 0;
+			try {
+				Statement statement = con.createStatement();
+				
+			    String sql = "select * from testdb.tabledata"; 
+				
+				ResultSet res = statement.executeQuery(sql);
+				
+				while(res.next()){
+					System.out.println(res.getString("folder"));
+					if(res.getString("folder") != null){
+						if(res.getString("folder").equals(subfoldername)){
+							for(int i = 0; i <= 30; i++){
+								tempString = res.getString("subfolder" + i);
+								System.out.println("subfolder" + i + ":" + tempString);
+								if(tempString == null){
+									//add to subfolder i chain
+									
+									try {
+										Statement stmnt = con.createStatement();
+									
+										String sql2 = "UPDATE testdb.tabledata SET subfolder" + i + " = '" + tablename + "' WHERE folder = '" + subfoldername +"'";
+									
+										int result = stmnt.executeUpdate(sql2);
+										System.out.println("subfolder didnt exist. created new one. inserted successfully into tabledata!");
+									
+									} catch (SQLException e) {
+										e.printStackTrace();
+									}
+									
+									break;
+								}
+							}
+							
+							//TODO Handle maximum capacity
+						}
+					}
+				}
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+		}else{
+			try {
+				Statement statement = con.createStatement();
+			
+				System.out.println("subfolder didnt exist. created new one. inserted successfully into tabledata!");
+			
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		return true;
 		
@@ -302,6 +410,7 @@ public class DBHandler {
 					if(res.getString("passwort").equals(password)){
 						System.out.println("login while actually accepted!");
 						accepted = true;	
+						break;
 					}
 				}
 			}
@@ -361,6 +470,49 @@ public class DBHandler {
 		}
 		
 		return priviledgeID;
+	}
+
+	public boolean createSubfolder(String name) {
+		
+		boolean exists = false;
+		
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "SELECT * FROM testdb.tabledata"; 
+			
+			ResultSet res = statement.executeQuery(sql);
+			
+			while(res.next()){
+				
+				if(res.getString("folder") != null){
+					if(res.getString("folder").equals(name)){
+						exists = true;
+						break;
+					}
+				}
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		if(!exists){
+			try {
+				Statement statement = con.createStatement();
+			
+				String sql = "INSERT INTO testdb.tabledata(folder) " +
+							 "VALUES ('" + name + "')"; 
+			
+				int result = statement.executeUpdate(sql);
+			
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return exists;
+		
 	}
 		
 }
