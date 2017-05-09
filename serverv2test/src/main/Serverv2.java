@@ -238,7 +238,7 @@ public class Serverv2 extends javax.swing.JFrame {
 			
 			while(true){
 				currentMS = System.currentTimeMillis();
-				if(currentMS - startMS > 5000){
+				if(currentMS - startMS > 10000){
 					
 					try {
 						sendMessage("check to: " + client.getUsername(), client);
@@ -382,18 +382,19 @@ public class Serverv2 extends javax.swing.JFrame {
 		if(command.startsWith("!createTable")){
 			String[] tablename;
 			tablename = command.split(" ");
-			if(dbhandler.checkTable(tablename[1])){
-				outputPane.append("\n Table already exists. If you want to overwrite an existing table, please use the !overwriteTable command. Table not created.");
-			}else{
+				outputPane.append("\n Table already exists.");
 				ArrayList<String> columns = new ArrayList<String>();
 				for(int i = 3; i < tablename.length; i++){
 					columns.add(tablename[i]);
 				}
-				if(dbhandler.createTable(tablename[1], tablename[2], columns)){
-					outputPane.append("\n Table successfully added to the Database.");
-				}else{
-					outputPane.append("\n Error: Table could not be added to the Filesystem.");
-				}
+			
+			String returned = dbhandler.createTable(tablename[1], tablename[2], columns);
+			outputPane.append("\n Tablecreation returned: " + returned);
+			try {
+				sendMessage(returned, userStream);
+			} catch (IOException e) {
+				e.printStackTrace();
+			pushDirectoryUpdate();
 			}
 		}
 		
@@ -406,14 +407,15 @@ public class Serverv2 extends javax.swing.JFrame {
 			}else{
 				outputPane.append("successfully created subfolder " + subfolderName[1] + "!");
 			}
+			pushDirectoryUpdate();
 		}
 		
 		if(command.startsWith("!overwriteTable")){
-			String[] tablename;
-			tablename = command.split(" ");
-			if(dbhandler.checkTable(tablename[1])){
+			String[] tablename2;
+			tablename2 = command.split(" ");
+			if(dbhandler.checkTable(tablename2[1])){
 				outputPane.append("\n Table already exists. Overwriting initiated.");
-				if(dbhandler.overwriteTable(tablename[1])){
+				if(dbhandler.overwriteTable(tablename2[1])){
 					outputPane.append("\n Table successfully overwritten.");
 				}else{
 					outputPane.append("\n Error: Table could not be added to the Filesystem.");
@@ -450,14 +452,33 @@ public class Serverv2 extends javax.swing.JFrame {
 			pushDirectoryUpdate();
 		}
 		
+		if(command.startsWith("!requestTableData")){
+			String tableName = command.split(" ")[1];
+			String message = dbhandler.generateTableDataString(tableName);
+			try {
+				sendMessage(message, userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		
 		if(command.startsWith("!appendTableLine")){
-			
+			String[] tableLineData;
+			tableLineData = command.split("\\*");
+			dbhandler.appendTableLine(tableLineData, userStream.getUsername());
+			outputPane.append("\n Appended line!");
+			try {
+				sendMessage("!appendedLine", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
-    
-    public boolean isOnlineClient(String credentialCheck){
+
+	public boolean isOnlineClient(String credentialCheck){
     	boolean updateSuccess = false;
     	
     	//stub, return true, if successfully added logindata on server
