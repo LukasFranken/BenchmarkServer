@@ -591,6 +591,14 @@ public class DBHandler {
 
 	public String generateTableDataString(String tableName) {
 		
+		if(tableName.equals("userdata")){
+			tableName = "";
+		}
+		
+		if(tableName.equals("happyhippounicorn")){
+			tableName = "userdata";
+		}
+		
 		//add tablename section
 		String message = "!tableData&";
 		if(checkTable(tableName)){
@@ -645,6 +653,28 @@ public class DBHandler {
 		}
 		
 		System.out.println("finalmsg tabledata: " + message);
+		return message;
+	}
+
+	public String getUsers() {
+		String message = "!updateExistingUsers";
+		
+		try {
+			Statement statement = con.createStatement();
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.userdata");
+			
+			while(set.next()){
+				
+				message += "*" + set.getString("username");
+				
+			}
+
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return message;
 	}
 		

@@ -430,6 +430,12 @@ public class Serverv2 extends javax.swing.JFrame {
 			username = command.split(" ");
 			if(dbhandler.checkUser(username[1])){
 				outputPane.append("\n User already exists.");
+				try {
+					sendMessage("!userAddExists", userStream);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}else{
 				
 				String name = username[1];
@@ -438,8 +444,21 @@ public class Serverv2 extends javax.swing.JFrame {
 				
 				if(dbhandler.createUser(name, pass, priviledge)){
 					outputPane.append("\n* User successfully added to the Database.");
+					try {
+						sendMessage("!userAddSuccess", userStream);
+						sendMessage(dbhandler.getUsers(), userStream);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}else{
 					outputPane.append("\n* Error: User could not be added to the Database.");
+					try {
+						sendMessage("!userAddError", userStream);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -450,6 +469,21 @@ public class Serverv2 extends javax.swing.JFrame {
 		
 		if(command.startsWith("!requestDirectoryUpdate")){
 			pushDirectoryUpdate();
+		}
+		
+		if(command.startsWith("!requestUserExistingUpdate")){
+			
+			System.out.println(userStream.pipeType + " -< this");
+			if(userStream.getPipeType().equals("admin")){
+				
+				try {
+					sendMessage(dbhandler.getUsers(), userStream);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
 		}
 		
 		if(command.startsWith("!requestTableData")){
