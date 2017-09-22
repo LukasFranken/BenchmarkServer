@@ -1,5 +1,5 @@
 # BenchmarkServer
-server for the benchmarking
+Server for the benchmarking
 
 Server Installation Prerequirements and Routine
 
