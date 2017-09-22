@@ -490,6 +490,7 @@ public class Serverv2 extends javax.swing.JFrame {
 			String tableName = command.split(" ")[1];
 			String message = dbhandler.generateTableDataString(tableName);
 			try {
+				System.out.println("tabledata string sent: " + tableName);
 				sendMessage(message, userStream);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -497,16 +498,80 @@ public class Serverv2 extends javax.swing.JFrame {
 			}
 		}
 		
+		if(command.startsWith("!requestTableUpdateReset")){
+			
+			try {
+				System.out.println("tabledata reset string sent");
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+			ArrayList<String> tables = dbhandler.generateTableNameList();
+			
+			for(int i = 0; i < tables.size() ; i++){
+				System.out.println("generate table data from: " + tables.get(i));
+				String message = dbhandler.generateTableDataString(tables.get(i));
+				try {
+					System.out.println("tabledata string sent: " + tables.get(i));
+					sendMessage(message, userStream);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}	
+			}
+		}
+		
+		if(command.startsWith("!requestTableAllData")){
+			ArrayList<String> tables = dbhandler.generateTableNameList();
+			
+			for(int i = 0; i < tables.size() ; i++){
+				System.out.println("generate table data from: " + tables.get(i));
+				String message = dbhandler.generateTableDataString(tables.get(i));
+				try {
+					System.out.println("tabledata string sent: " + tables.get(i));
+					sendMessage(message, userStream);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}	
+			}
+		}
+		
 		if(command.startsWith("!appendTableLine")){
 			String[] tableLineData;
-			tableLineData = command.split("\\*");
+			tableLineData = command.split(" ");
 			dbhandler.appendTableLine(tableLineData, userStream.getUsername());
 			outputPane.append("\n Appended line!");
+			try {
+				sendMessage("!appendedLine", userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		if(command.startsWith("!changeUserData")){
+			String[] userChangeDataArray;
+			userChangeDataArray = command.split("\\*");
+			dbhandler.changeUserData(userChangeDataArray);
+			outputPane.append("\n userdata changed!");
 			try {
 				sendMessage("!appendedLine", userStream);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			}
+		}
+		
+		if(command.startsWith("!deleteUser")){
+			String username[] = command.split(" ");
+			if(userStream.getPipeType().equals("admin")){
+				dbhandler.deleteUserData(username[1]);
+				outputPane.append("User deleted if existed.");
 			}
 		}
 		

@@ -28,6 +28,8 @@ public class DBHandler {
 	private String maintenanceVarsDB = "?verifyServerCertificate=false&useSSL=true";
 	private boolean wasInstanciatedThisSession = false;
 	
+	public static ArrayList<String> tableNames = new ArrayList<String>();
+	
 	static String postProcessDefPath = "default";
 	static int wasInitialized = 0;
 	static int globalPort = 5000;
@@ -154,7 +156,7 @@ public class DBHandler {
 	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
 	                     " folder VARCHAR(255), ";
 		    
-		    for(int i = 0; i <= 30; i++){
+		    for(int i = 0; i <= 100; i++){
 		    	sql += "subfolder"+i+" VARCHAR(255), ";
 		    }
 		    
@@ -241,22 +243,52 @@ public class DBHandler {
 		return exists;
 	}
 	
+	public ArrayList<String> generateTableNameList(){
+		ArrayList<String> tableNames = new ArrayList<String>();
+		
+		try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.tabledata");
+			
+			String tablePointer = "";
+			
+			while(set.next()){
+				for(int i = 0; i < 30; i++){
+					if(set.getString("subfolder" + i) != null){
+						tablePointer = set.getString("subfolder" + i);
+						System.out.println("result set tablenamelistgen tableadd: " + set.getString("folder").toLowerCase() + "#" + tablePointer.toLowerCase());
+						tableNames.add(set.getString("folder").toLowerCase() + "#" + tablePointer.toLowerCase());
+					}
+				}
+			}
+
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return tableNames;
+	}
+	
 	//Obsolete
 	public String createTable(String tablename, String subfoldername,  ArrayList<String> columns){
 		boolean tableExists = checkTable(tablename);
 		System.out.println("table exists: " + tableExists);
 		
 		String response = "";
+		String finaltablename = subfoldername.toLowerCase() + "#" + tablename;
 		
 		if(!tableExists){
 			try {
 				Statement statement = con.createStatement();
 				
-			    String sql = "CREATE TABLE " + tablename + " " +
+			    String sql = "CREATE TABLE `" + finaltablename + "` " +
 		                     "(ID INTEGER not NULL AUTO_INCREMENT, ";
 			    
 			    for(int i = 0; i < columns.size(); i++){
-			    	sql += " "+ columns.get(i) + " VARCHAR(255), ";
+			    	sql += " `"+ columns.get(i) + "` VARCHAR(255), ";
 			    }
 			    
 			    sql += " PRIMARY KEY ( ID ))"; 
@@ -455,6 +487,7 @@ public class DBHandler {
 					System.out.println(res.getString("subfolder" + Integer.toString(i)));
 					if(res.getString("subfolder" + Integer.toString(i)) != null){
 						directoryString += " " + res.getString("subfolder" + Integer.toString(i));
+						tableNames.add(res.getString("subfolder" + Integer.toString(i)));
 					}
 					i++;
 				}
@@ -554,33 +587,74 @@ public class DBHandler {
 	}
 
 	public void appendTableLine(String[] tableLineData, String name) {
-		String tableName = tableLineData[1];
 		
+		//add columnname section
+		ArrayList<String> columns = new ArrayList<String>();
 		try {
 			Statement statement = con.createStatement();
-			ResultSet set = statement.executeQuery("SELECT * FROM testdb." + tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + tableLineData[1] + "`");
 			
 			ResultSetMetaData md = set.getMetaData();
 			for (int i=2; i<=md.getColumnCount(); i++)
 			{
-			    System.out.println(md.getColumnLabel(i));
+			    System.out.println("columnLabel: " + md.getColumnLabel(i));
+			    columns.add(md.getColumnLabel(i));
 			}
 
 			
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		String timeStampTime = new SimpleDateFormat("HH").format(new Date(System.currentTimeMillis())) + ":" + new SimpleDateFormat("mm").format(new Date(System.currentTimeMillis()));
-		String timeStampDate = new SimpleDateFormat("dd.MM.yyyy").format(new Date(System.currentTimeMillis()));
+		
+		//String timeStampTime = new SimpleDateFormat("HH").format(new Date(System.currentTimeMillis())) + ":" + new SimpleDateFormat("mm").format(new Date(System.currentTimeMillis()));
+		//String timeStampDate = new SimpleDateFormat("dd.MM.yyyy").format(new Date(System.currentTimeMillis()));
 		
 		try {
 			Statement statement = con.createStatement();
 			
-		    String sql = "INSERT INTO testdb.benchmark1(Datum, Uhrzeit, Name, Zugabe, Stoff, Begründung) " +
-	                     "VALUES ('" + timeStampDate + "','" + timeStampTime + "','" + name + "','" + tableLineData[2] + "','" + tableLineData[3] + "','" + tableLineData[4] + "')"; 
+			String columnLabelSqlString = "(";
 			
+			for(int i = 0; i < columns.size(); i++){
+				if(i == 0){
+					columnLabelSqlString += "`"+columns.get(i)+"`";
+				}else{
+					columnLabelSqlString += ", " + "`"+columns.get(i)+"`";
+				}
+			}
+			
+			columnLabelSqlString += ") ";
+			
+			System.out.println("final CLSS: " + columnLabelSqlString);
+			
+			columns.remove(0);
+			columns.remove(0);
+			columns.remove(0);
+
+			for(int i = 0; i < columns.size(); i++){
+				if(columns.get(i).equals("Begründung")){
+					columns.remove(i);
+				}
+			}
+			
+			System.out.println("columns new size after removal: " + columns.size());
+			
+			String stoffString = "";
+			for(int i = 0; i < columns.size(); i++){
+				if(columns.get(i).equals(tableLineData[2])){
+					stoffString += tableLineData[3] + "','";
+				}else{
+					stoffString += " ','";
+				}
+			}
+			
+			System.out.println("stoffstring final: " + stoffString);
+			
+		    String sql = "INSERT INTO testdb." + "`" + tableLineData[1] + "`" + columnLabelSqlString +
+	                     "VALUES ('" + tableLineData[4] + "','" + tableLineData[5] + "','" + name + "','" + stoffString + tableLineData[6] + "')"; 
+			
+		    System.out.println("final SQL apenndline: " + sql);
+		    
 			int result = statement.executeUpdate(sql);
 			
 		} catch (SQLException e) {
@@ -609,7 +683,8 @@ public class DBHandler {
 		ArrayList<String> columns = new ArrayList<String>();
 		try {
 			Statement statement = con.createStatement();
-			ResultSet set = statement.executeQuery("SELECT * FROM testdb." + tableName);
+			//System.out.println(tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + tableName + "`");
 			
 			ResultSetMetaData md = set.getMetaData();
 			for (int i=2; i<=md.getColumnCount(); i++)
@@ -624,14 +699,13 @@ public class DBHandler {
 
 			
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 		//add tabledata section
 		try {
 			Statement statement = con.createStatement();
-			ResultSet set = statement.executeQuery("SELECT * FROM testdb." + tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + tableName + "`");
 			
 			while(set.next()){
 				
@@ -676,6 +750,45 @@ public class DBHandler {
 		}
 		
 		return message;
+	}
+
+	public void changeUserData(String[] userChangeDataArray) {
+		
+		System.out.println("userdatachange triggered!");
+		
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "UPDATE testdb.userdata " +
+						 "SET " + userChangeDataArray[1] +
+						 " = " + "'" + userChangeDataArray[3] + "'" +
+						 " WHERE " + "username" +
+						 " = " + "'" +userChangeDataArray[2] + "'"; 
+		
+			int result = statement.executeUpdate(sql);
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void deleteUserData(String username){
+		
+		System.out.println("userdatadeletition triggered!");
+		
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "DELETE FROM testdb.userdata " +
+						 "WHERE username = '" + username + "'";
+		
+			int result = statement.executeUpdate(sql);
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
 	}
 		
 }
