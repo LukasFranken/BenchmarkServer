@@ -3,9 +3,9 @@ server for the benchmarking
 
 Server Installation Prerequirements and Routine
 
-Java 8 v111 (or newer)
-MS Visual c++ 2015
-MS Visual c++ 2013
+Java 8 v111 (or newer),
+MS Visual c++ 2015,
+MS Visual c++ 2013,
 .net Framework 4.5.2 (even if newer preinstalled)
 
 MySQL Commuinity Package:
