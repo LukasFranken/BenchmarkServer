@@ -509,19 +509,6 @@ public class Serverv2 extends javax.swing.JFrame {
 			}	
 			
 			
-			ArrayList<String> tables = dbhandler.generateTableNameList();
-			
-			for(int i = 0; i < tables.size() ; i++){
-				System.out.println("generate table data from: " + tables.get(i));
-				String message = dbhandler.generateTableDataString(tables.get(i));
-				try {
-					System.out.println("tabledata string sent: " + tables.get(i));
-					sendMessage(message, userStream);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}	
-			}
 		}
 		
 		if(command.startsWith("!requestTableAllData")){
@@ -537,6 +524,14 @@ public class Serverv2 extends javax.swing.JFrame {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}	
+					
+			}
+			
+			try {
+				sendMessage("!finishedTableUpdate", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 		
@@ -644,6 +639,6 @@ public class Serverv2 extends javax.swing.JFrame {
 		return accepted;
 
     }
-                 
+    
 
 }

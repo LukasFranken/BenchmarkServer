@@ -23,7 +23,7 @@ public class DBHandler {
 	
 	private int osType = 32;
 	private String defaultPath = "jdbc:mysql://localhost:";
-	private int defaultDBPort = 3306;
+	private int defaultDBPort = 3305;
 	private String defaultDBName = "testdb";
 	private String maintenanceVarsDB = "?verifyServerCertificate=false&useSSL=true";
 	private boolean wasInstanciatedThisSession = false;
@@ -105,8 +105,15 @@ public class DBHandler {
 			}
 			
 			if(!checkTable("tabledata")){
+				System.out.println("cat table called!");
 				createCatTable();
 				returnMessage += "- Category Table not found. Created new one.";
+			}
+			
+			if(!checkTable("begrunddata")){
+				System.out.println("begrund table called!");
+				createBegrundTable();
+				returnMessage += "- Begründungs Table not found. Created new one.";
 			}
 			
 		}
@@ -127,6 +134,21 @@ public class DBHandler {
 		}
 		
 		return returnMessage;
+	}
+	
+	private void createBegrundTable(){
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE BEGRUNDDATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " PRIMARY KEY ( ID ))"; 
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private void createUserTable(){
@@ -156,7 +178,7 @@ public class DBHandler {
 	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
 	                     " folder VARCHAR(255), ";
 		    
-		    for(int i = 0; i <= 100; i++){
+		    for(int i = 0; i <= 50; i++){
 		    	sql += "subfolder"+i+" VARCHAR(255), ";
 		    }
 		    
@@ -368,7 +390,84 @@ public class DBHandler {
 			response += "- table existed! added substring identifier.";
 		}
 		
+		appendEmptyLine(tablename, subfoldername);
+		
+		if(addTableToBegrundung(tablename)){
+			response += "- table added successfully to begrundung.";
+		}else{
+			response += "- table add to begrundung unsuccessful!";
+		}
+		
 		return response;
+		
+	}
+	
+	public void appendEmptyLine(String tableName, String subfolderName){
+		
+		System.out.println("appending empty line for: " + tableName);
+		
+		ArrayList<String> columns = new ArrayList<String>();
+		
+		String finalTableName = "";
+		
+		finalTableName = subfolderName.toLowerCase() + "#" + tableName.toLowerCase();
+		
+		try {
+			Statement statement = con.createStatement();
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + finalTableName + "`");
+			
+			ResultSetMetaData md = set.getMetaData();
+			for (int i=2; i<=md.getColumnCount(); i++)
+			{
+			    System.out.println("columnLabel: " + md.getColumnLabel(i));
+			    columns.add(md.getColumnLabel(i));
+			}
+
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			Statement statement = con.createStatement();
+			
+			String columnLabelSqlString = "(";
+			
+			for(int i = 0; i < columns.size(); i++){
+				if(i == 0){
+					columnLabelSqlString += "`"+columns.get(i)+"`";
+				}else{
+					columnLabelSqlString += ", " + "`"+columns.get(i)+"`";
+				}
+			}
+			
+			columnLabelSqlString += ") ";
+			
+			String columnEntrySqlString = "(";
+			
+			for(int i = 0; i < columns.size(); i++){
+				
+				if(i == 0){
+					columnEntrySqlString +="'"+" "+"'";
+				}else{
+					columnEntrySqlString += ", " + "'"+" "+"'";
+				}
+				
+			}
+			
+			columnEntrySqlString += ") ";
+			
+			
+		    String sql = "INSERT INTO testdb." + "`" + finalTableName + "`" + columnLabelSqlString +
+	                     "VALUES " + columnEntrySqlString; 
+			
+		    System.out.println("final SQL apenndemptyline: " + sql);
+		    
+			int result = statement.executeUpdate(sql);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 		
 	}
 	
@@ -790,5 +889,94 @@ public class DBHandler {
 		}
 		
 	}
+	
+    public boolean addTableToBegrundung(String tablename){
+    	boolean accepted = false;
+    	
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "ALTER TABLE `testdb`.`begrunddata` ADD COLUMN `" + tablename + "` VARCHAR(255) NULL DEFAULT NULL;";
+		
+			int result = statement.executeUpdate(sql);
+			
+			accepted = true;
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    }
+    
+    public boolean removeTableFromBegrundung(String tablename){
+    	boolean accepted = false;
+    	
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "ALTER TABLE `testdb`.`begrunddata` DROP COLUMN `" + tablename + "`;";
+		
+			int result = statement.executeUpdate(sql);
+			
+			accepted = true;
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    }
+            
+    public boolean addTableBegrundung(String tablename, String begrundung){
+    	boolean accepted = false;
+    	
+		try {
+			Statement statement = con.createStatement();
+			
+			
+			//TODO begrundung sql #etc sicher machen
+		    String sql = "INSERT INTO testdb.begrunddata(`" + tablename + "`) " +
+	                     "VALUES ('" + begrundung + "')"; 
+			
+			int result = statement.executeUpdate(sql);
+			
+			accepted = true;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    }
+    
+    public boolean changeTableBegrundungActivity(String tablename, String begrundung){
+    	boolean accepted = false;
+    	
+    	String begrundungNew = "";
+    	
+    	if(begrundung.substring(begrundung.length()-1).equals("-")){
+    		
+    	}
+    	
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "UPDATE testdb.begrunddata " +
+						 "SET " + "`" + tablename + "`" +
+						 " = " + "'" + begrundungNew + "'" +
+						 " WHERE " + "`" + tablename + "`" +
+						 " = " + "'" + begrundung + "'"; 
+		
+			int result = statement.executeUpdate(sql);
+			
+		accepted = true;
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    }
 		
 }
