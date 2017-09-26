@@ -362,6 +362,22 @@ public class Serverv2 extends javax.swing.JFrame {
 			}
 		}
 		
+		if(command.startsWith("!createBegrundung")){
+			String[] message;
+			message = command.split("");
+			System.out.println("createbegrundung: " + message[1] + " " + message[2]);
+			dbhandler.addTableBegrundung(message[1], message[2]);
+			outputPane.append("begrundung created!");
+		}
+		
+		if(command.startsWith("!changeBegrundung")){
+			String[] message;
+			message = command.split("");
+			System.out.println("changebegrundung: " + message[1] + " " + message[2]);
+			dbhandler.changeTableBegrundungActivity(message[1], message[2]);
+			outputPane.append("begrundung changed!");
+		}
+		
 		if(command.startsWith("!createDirectory")){
 			String[] path;
 			path = command.split(" ");

@@ -23,7 +23,7 @@ public class DBHandler {
 	
 	private int osType = 32;
 	private String defaultPath = "jdbc:mysql://localhost:";
-	private int defaultDBPort = 3305;
+	private int defaultDBPort = 3306;
 	private String defaultDBName = "testdb";
 	private String maintenanceVarsDB = "?verifyServerCertificate=false&useSSL=true";
 	private boolean wasInstanciatedThisSession = false;
@@ -142,6 +142,7 @@ public class DBHandler {
 			
 		    String sql = "CREATE TABLE BEGRUNDDATA " +
 	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " global VARCHAR(255), " + 
 	                     " PRIMARY KEY ( ID ))"; 
 			
 			int result = statement.executeUpdate(sql);
@@ -392,7 +393,9 @@ public class DBHandler {
 		
 		appendEmptyLine(tablename, subfoldername);
 		
-		if(addTableToBegrundung(tablename)){
+		
+		String finalTableName = subfoldername.toLowerCase() + "#" + tablename.toLowerCase();
+		if(addTableToBegrundung(finalTableName)){
 			response += "- table added successfully to begrundung.";
 		}else{
 			response += "- table add to begrundung unsuccessful!";
