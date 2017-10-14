@@ -940,7 +940,7 @@ public class DBHandler {
 			
 			//TODO begrundung sql #etc sicher machen
 		    String sql = "INSERT INTO testdb.begrunddata(`" + tablename + "`) " +
-	                     "VALUES ('" + begrundung + "')"; 
+	                     "VALUES ('" + begrundung + "+')"; 
 			
 			int result = statement.executeUpdate(sql);
 			
@@ -956,10 +956,14 @@ public class DBHandler {
     public boolean changeTableBegrundungActivity(String tablename, String begrundung){
     	boolean accepted = false;
     	
-    	String begrundungNew = "";
+    	String begrundungNew = begrundung.substring(0, begrundung.length()-1);
     	
     	if(begrundung.substring(begrundung.length()-1).equals("-")){
-    		
+    		begrundungNew += "+";
+    	}else if(begrundung.substring(begrundung.length()-1).equals("+")){
+    		begrundungNew += "-";
+    	}else{
+    		System.out.println("ERROR IN LINE 961+ AT dbhandler.CHANGETABLEBEGRUNDACTIVITY()! INVALID ACTIVITY IDENTIFIER!");
     	}
     	
 		try {
@@ -981,5 +985,46 @@ public class DBHandler {
     	
     	return accepted;
     }
-		
+    
+    public String getBegrundungString(){
+    	
+    	String message = "!begrunddata&";
+    	
+    	//add columnname section
+    			ArrayList<String> columns = new ArrayList<String>();
+    			try {
+    				Statement statement = con.createStatement();
+    				//System.out.println(tableName);
+    				ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "begrunddata" + "`");
+    				
+    				ResultSetMetaData md = set.getMetaData();
+    				for (int i=2; i<=md.getColumnCount(); i++)
+    				{
+    					if(i != 2){
+    						message += "&";
+    					}
+    				    System.out.println(md.getColumnLabel(i));
+    				    message += md.getColumnLabel(i);
+    				    
+    				    while(set.next()){
+    				    	if(set.getString(md.getColumnLabel(i)) != null){
+        				    	message += "=";
+        				    	message += set.getString(md.getColumnLabel(i));
+    				    	}
+    				    }
+    				    
+    				    set.beforeFirst();
+    				    
+    				    columns.add(md.getColumnLabel(i));
+    				}
+
+    				
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+    	
+    	return message;
+    	
+    }
+
 }

@@ -364,7 +364,7 @@ public class Serverv2 extends javax.swing.JFrame {
 		
 		if(command.startsWith("!createBegrundung")){
 			String[] message;
-			message = command.split("");
+			message = command.split("\\^");
 			System.out.println("createbegrundung: " + message[1] + " " + message[2]);
 			dbhandler.addTableBegrundung(message[1], message[2]);
 			outputPane.append("begrundung created!");
@@ -372,7 +372,7 @@ public class Serverv2 extends javax.swing.JFrame {
 		
 		if(command.startsWith("!changeBegrundung")){
 			String[] message;
-			message = command.split("");
+			message = command.split("\\^");
 			System.out.println("changebegrundung: " + message[1] + " " + message[2]);
 			dbhandler.changeTableBegrundungActivity(message[1], message[2]);
 			outputPane.append("begrundung changed!");
@@ -519,6 +519,19 @@ public class Serverv2 extends javax.swing.JFrame {
 			try {
 				System.out.println("tabledata reset string sent");
 				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!requestBegrundungData")){
+			
+			try {
+				System.out.println("begrunddata string sent!");
+				sendMessage(dbhandler.getBegrundungString(), userStream);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
