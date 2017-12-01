@@ -398,7 +398,17 @@ public class Serverv2 extends javax.swing.JFrame {
 		if(command.startsWith("!createTable")){
 			String[] tablename;
 			tablename = command.split(" ");
-				outputPane.append("\n Table already exists.");
+			
+			if(dbhandler.checkTable(tablename[2].toLowerCase() + "#" + tablename[1].toLowerCase())){
+				outputPane.append("\n Table already exists.");	
+				try {
+					sendMessage("!tableCreateDuplicate", userStream);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+			}else{
+				
 				ArrayList<String> columns = new ArrayList<String>();
 				for(int i = 3; i < tablename.length; i++){
 					columns.add(tablename[i]);
@@ -412,6 +422,9 @@ public class Serverv2 extends javax.swing.JFrame {
 				e.printStackTrace();
 			pushDirectoryUpdate();
 			}
+				
+			}
+			
 		}
 		
 		if(command.startsWith("!createSubfolder")){
@@ -490,7 +503,7 @@ public class Serverv2 extends javax.swing.JFrame {
 		if(command.startsWith("!requestUserExistingUpdate")){
 			
 			System.out.println(userStream.pipeType + " -< this");
-			if(userStream.getPipeType().equals("admin")){
+			if(userStream.getPipeType().equals("Admin")){
 				
 				try {
 					sendMessage(dbhandler.getUsers(), userStream);
@@ -504,7 +517,7 @@ public class Serverv2 extends javax.swing.JFrame {
 		
 		if(command.startsWith("!requestTableData")){
 			String tableName = command.split(" ")[1];
-			String message = dbhandler.generateTableDataString(tableName);
+			String message = dbhandler.generateTableDataString(tableName, userStream.getPipeType());
 			try {
 				System.out.println("tabledata string sent: " + tableName);
 				sendMessage(message, userStream);
@@ -541,11 +554,13 @@ public class Serverv2 extends javax.swing.JFrame {
 		}
 		
 		if(command.startsWith("!requestTableAllData")){
-			ArrayList<String> tables = dbhandler.generateTableNameList();
+			
+			ArrayList<String> tables = dbhandler.generateTableNameList(userStream.getPipeType());
+			
+			tables.add("deletedata");
 			
 			for(int i = 0; i < tables.size() ; i++){
-				System.out.println("generate table data from: " + tables.get(i));
-				String message = dbhandler.generateTableDataString(tables.get(i));
+				String message = dbhandler.generateTableDataString(tables.get(i), userStream.getPipeType());
 				try {
 					System.out.println("tabledata string sent: " + tables.get(i));
 					sendMessage(message, userStream);
@@ -597,6 +612,174 @@ public class Serverv2 extends javax.swing.JFrame {
 				dbhandler.deleteUserData(username[1]);
 				outputPane.append("User deleted if existed.");
 			}
+		}
+		
+		if(command.startsWith("!substancerename")){
+			
+			try {
+				System.out.println("substance rename triggered!");
+				if(dbhandler.renameSubstance(command)){
+					sendMessage("!substancerenamesuccess", userStream);
+					sendMessage("!tableResetData", userStream);
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!substancehide")){
+			
+			try {
+				System.out.println("substance hide triggered!");
+				dbhandler.hideSubstance(command);
+				sendMessage("!substancehidesuccess", userStream);
+				sendMessage(dbhandler.createHiddenDataString(), userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		
+		//questionable, read for more in dbhandlers accordign function.
+		if(command.startsWith("!substancedelete")){
+			
+			try {
+				System.out.println("substance delete triggered!");
+				dbhandler.deleteSubstance(command);
+				sendMessage("!substancedeletesuccess", userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!requestHiddenData")){
+			try {
+				System.out.println("hiddendata request triggered!");
+				sendMessage(dbhandler.createHiddenDataString(), userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		if(command.startsWith("!substanceadd")){
+			
+			try {
+				System.out.println("substance add triggered!");
+				dbhandler.addSubstance(command);
+				sendMessage("!substanceaddsuccess", userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!substancemove")){
+			
+			try {
+				System.out.println("substance move triggered!");
+				dbhandler.moveSubstance(command);
+				sendMessage("!substancemovesuccess", userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!tablehide")){
+			
+			try {
+				System.out.println("table hide triggered!");
+				dbhandler.hideTable(command);
+				sendMessage("!tablehidesuccess", userStream);
+				sendMessage(dbhandler.createHiddenDataString(), userStream);
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!tableMove")){
+			
+			try {
+				System.out.println("table move triggered!");
+				dbhandler.moveTable(command);
+				sendMessage("!tablemovesuccess", userStream);
+				pushDirectoryUpdate();
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!deleteLine")){
+			
+			try {
+				System.out.println("delete line triggered!");
+				dbhandler.deleteLine(command);
+				sendMessage("!deletelinesuccess", userStream);
+				pushDirectoryUpdate();
+				sendMessage("!tableResetData", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+		if(command.startsWith("!requestDeleteLine")){
+			
+			try {
+				System.out.println("delete line request triggered!");
+				dbhandler.requestDeleteLine(command);
+				sendMessage("!deletelinerequestsuccess", userStream);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			
+			
+		}
+		
+	}
+
+	private void transmitDeleteData(LabeledObjectOutputStream userStream) {
+		String message = "";
+		
+		dbhandler.generateTableDataString("deletedata", "Admin");
+		
+		try {
+			sendMessage(message, userStream);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
 	}

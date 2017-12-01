@@ -11,10 +11,12 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Date;
 
 import main.WinRegistry;
 
 import java.sql.*;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
 public class DBHandler {
@@ -35,6 +37,9 @@ public class DBHandler {
 	static int globalPort = 5000;
 	static boolean isConnectedToDB = false;
 	static Connection con;
+	
+	private DateFormat dateFormatTime = new SimpleDateFormat("HH:mm");
+	private DateFormat dateFormatDate = new SimpleDateFormat("dd.MM.yyyy");
 	
 	static ArrayList<String> tablesToCreate;
 	
@@ -116,6 +121,30 @@ public class DBHandler {
 				returnMessage += "- Begründungs Table not found. Created new one.";
 			}
 			
+			if(!checkTable("metadata")){
+				System.out.println("meta table called!");
+				createMetaTable();
+				returnMessage += "- Meta Table not found. Created new one.";
+			}
+			
+			if(!checkTable("hiddendata")){
+				System.out.println("hidden table called!");
+				createHiddenTable();
+				returnMessage += "- Hidden Table not found. Created new one.";
+			}
+			
+			if(!checkTable("deletedata")){
+				System.out.println("hidden table called!");
+				createDeleteTable();
+				returnMessage += "- Delete Table not found. Created new one.";
+			}
+			
+			if(!checkTable("historydata")){
+				System.out.println("history table called!");
+				createHistoryTable();
+				returnMessage += "- History Table not found. Created new one.";
+			}
+			
 		}
 		
 		return returnMessage;
@@ -170,6 +199,81 @@ public class DBHandler {
 		}
 	}
 	
+	private void createHiddenTable(){
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE HIDDENDATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " tables VARCHAR(255), " + 
+	                     " substances VARCHAR(255), " + 
+	                     " PRIMARY KEY ( ID ))"; 
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void createDeleteTable(){
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE DELETEDATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " tablename VARCHAR(255), " + 
+	                     " identification VARCHAR(255), " + 
+	                     " begrundung VARCHAR(255), " + 
+	                     " requestinguser VARCHAR(255), " + 
+	                     " PRIMARY KEY ( ID ))"; 
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void createHistoryTable(){
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE HISTORYDATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " Tabelle VARCHAR(255), " + 
+	                     " Eintragsdatum VARCHAR(255), " + 
+	                     " Eintragsuhrzeit VARCHAR(255), " + 
+	                     " Absendedatum VARCHAR(255), " + 
+	                     " Absendeuhrzeit VARCHAR(255), " + 
+	                     " Name VARCHAR(255), " + 
+	                     " EintragsID VARCHAR(255), " + 
+	                     " Stoffe VARCHAR(255), " + 
+	                     " Begründung VARCHAR(255), " + 
+	                     " PRIMARY KEY ( ID ))"; 
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void createMetaTable(){
+		try {
+			Statement statement = con.createStatement();
+			
+		    String sql = "CREATE TABLE METADATA " +
+	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
+	                     " PRIMARY KEY ( ID ))"; 
+			
+			int result = statement.executeUpdate(sql);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	private void createCatTable(){
 		
 		try {
@@ -177,13 +281,7 @@ public class DBHandler {
 			
 		    String sql = "CREATE TABLE TABLEDATA " +
 	                     "(ID INTEGER not NULL AUTO_INCREMENT, " +
-	                     " folder VARCHAR(255), ";
-		    
-		    for(int i = 0; i <= 50; i++){
-		    	sql += "subfolder"+i+" VARCHAR(255), ";
-		    }
-		    
-		    sql += " PRIMARY KEY ( ID ))"; 
+		     			 " PRIMARY KEY ( ID ))"; 
 	        System.out.println(sql);
 			
 			int result = statement.executeUpdate(sql);
@@ -266,8 +364,27 @@ public class DBHandler {
 		return exists;
 	}
 	
-	public ArrayList<String> generateTableNameList(){
+	public ArrayList<String> generateTableNameList(String priviledge){
 		ArrayList<String> tableNames = new ArrayList<String>();
+		
+		//if priviledge != Admin, check for hidden substances and leave them out
+		ArrayList<String> hiddenTables = new ArrayList<String>();
+		if(!priviledge.equals("Admin")){
+			
+			try {
+				Statement statement = con.createStatement();
+				//System.out.println(tableName);
+				ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "hiddendata" + "`");
+			    while(set.next()){
+			    	if(set.getString("tables") != null){
+			    		hiddenTables.add(set.getString("tables"));
+			    	}
+			    }
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		try {
 			Statement statement = con.createStatement();
@@ -276,16 +393,33 @@ public class DBHandler {
 			
 			String tablePointer = "";
 			
-			while(set.next()){
-				for(int i = 0; i < 30; i++){
-					if(set.getString("subfolder" + i) != null){
-						tablePointer = set.getString("subfolder" + i);
-						System.out.println("result set tablenamelistgen tableadd: " + set.getString("folder").toLowerCase() + "#" + tablePointer.toLowerCase());
-						tableNames.add(set.getString("folder").toLowerCase() + "#" + tablePointer.toLowerCase());
+			for(int i = 2; i <= set.getMetaData().getColumnCount(); i++){
+				
+				set.beforeFirst();
+				while(set.next()){
+					
+					tablePointer = set.getString(set.getMetaData().getColumnName(i));
+					
+					if(tablePointer != null){
+						
+						
+						if(!priviledge.equals("Admin")){
+							
+							if(!hiddenTables.contains(set.getMetaData().getColumnName(i).toLowerCase() + "#" + tablePointer.toLowerCase())){
+								tableNames.add(set.getMetaData().getColumnName(i).toLowerCase() + "#" + tablePointer.toLowerCase());
+								
+							}
+							
+						}else{
+							tableNames.add(set.getMetaData().getColumnName(i).toLowerCase() + "#" + tablePointer.toLowerCase());
+							
+						}
+						
 					}
+					
 				}
+				
 			}
-
 			
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
@@ -298,10 +432,9 @@ public class DBHandler {
 	//Obsolete
 	public String createTable(String tablename, String subfoldername,  ArrayList<String> columns){
 		boolean tableExists = checkTable(tablename);
-		System.out.println("table exists: " + tableExists);
 		
 		String response = "";
-		String finaltablename = subfoldername.toLowerCase() + "#" + tablename;
+		String finaltablename = subfoldername.toLowerCase() + "#" + tablename.toLowerCase();
 		
 		if(!tableExists){
 			try {
@@ -338,7 +471,24 @@ public class DBHandler {
 				
 				ResultSet res = statement.executeQuery(sql);
 				
-				while(res.next()){
+				
+				
+				try {
+					Statement stmnt = con.createStatement();
+				
+					String sql2 = "INSERT INTO testdb." + "`tabledata`" + "(`" + subfoldername + "`)" + "VALUES " + "('" + tablename.toLowerCase() + "')";
+				
+					int result = stmnt.executeUpdate(sql2);
+					System.out.println("subfolder didnt exist. created new one. inserted successfully into tabledata!");
+					response += "- table created!";
+				} catch (SQLException e) {
+					response += "- unknown error table creation!";
+					e.printStackTrace();
+				}
+				
+				
+				
+				/*while(res.next()){
 					System.out.println(res.getString("folder"));
 					if(res.getString("folder") != null){
 						if(res.getString("folder").equals(subfoldername)){
@@ -368,7 +518,7 @@ public class DBHandler {
 							//TODO Handle maximum capacity
 						}
 					}
-				}
+				}*/
 				
 			} catch (SQLException e) {
 				response += "- couldnt get tabledata!";
@@ -384,10 +534,11 @@ public class DBHandler {
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-			createTable(tablename, subfoldername,  columns);
+			//createTable(tablename, subfoldername,  columns);
+			addToMetaData(tablename, subfoldername);
 		}
 		}else{
-			createTable(tablename + "1", subfoldername,  columns);
+			//createTable(tablename + "1", subfoldername,  columns);
 			response += "- table existed! added substring identifier.";
 		}
 		
@@ -402,6 +553,12 @@ public class DBHandler {
 		}
 		
 		return response;
+		
+	}
+	
+	public void addToMetaData(String tablename, String foldername){
+		
+		
 		
 	}
 	
@@ -581,44 +738,34 @@ public class DBHandler {
 			
 			ResultSet res = statement.executeQuery(sql);
 			
-			while(res.next()){
-				directoryString += " * " + res.getString("folder");
+			ResultSetMetaData md = res.getMetaData();
+			
+			for (int i=2; i<=md.getColumnCount(); i++)
+			{
+			    
+			    
+				directoryString += " * " + md.getColumnLabel(i);
 				
-				int i = 0;
-				while(i < 30){
-					System.out.println(res.getString("subfolder" + Integer.toString(i)));
-					if(res.getString("subfolder" + Integer.toString(i)) != null){
-						directoryString += " " + res.getString("subfolder" + Integer.toString(i));
-						tableNames.add(res.getString("subfolder" + Integer.toString(i)));
+				res = statement.executeQuery(sql);
+				while(res.next()){
+					
+					if(res.getString(i) != null){
+						directoryString += " " + res.getString(i);
+						tableNames.add(res.getString(i));
 					}
-					i++;
 				}
+				
 			}
 			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		
-		/*File tableDirectory = new File("C:" + File.separator + "Users" + File.separator + "Instinct" + File.separator + "BenchmarkingDatabase" + File.separator + "Tables");
-		String[] folderNames = tableDirectory.list();
-		int folderAmount = folderNames.length;
-		String tempString;
-		File pointerFile;
+		directoryString += " #";
 		
-		for(int i = 0; i < folderNames.length; i++){
-			tempString = new String();
-			tempString += " * " + folderNames[i];
-			pointerFile = new File("C:" + File.separator + "Users" + File.separator + "Instinct" + File.separator + "BenchmarkingDatabase" + File.separator + "Tables" + File.separator + folderNames[i]);
-			for(int i2 = 0; i2 < pointerFile.list().length; i2++){
-				tempString += " " + pointerFile.list()[i2];
-			}
-			System.out.println(tempString);
-			directoryString += tempString;
-		}*/
 		
-		directoryString += " **";
 		
-		System.out.println(directoryString);
+		System.out.println("directory String final: " + directoryString);
 		return directoryString;
 	}
 
@@ -655,14 +802,13 @@ public class DBHandler {
 		    String sql = "SELECT * FROM testdb.tabledata"; 
 			
 			ResultSet res = statement.executeQuery(sql);
+			ResultSetMetaData md = res.getMetaData();
 			
-			while(res.next()){
+			for(int i = 1; i <= md.getColumnCount(); i++){
 				
-				if(res.getString("folder") != null){
-					if(res.getString("folder").equals(name)){
-						exists = true;
-						break;
-					}
+				System.out.println("COLUMN comparing: " + name + " " + md.getColumnName(i));
+				if(md.getColumnName(i).equals(name)){
+					exists = true;
 				}
 			}
 			
@@ -673,9 +819,10 @@ public class DBHandler {
 		if(!exists){
 			try {
 				Statement statement = con.createStatement();
-			
-				String sql = "INSERT INTO testdb.tabledata(folder) " +
-							 "VALUES ('" + name + "')"; 
+
+				String sql = "ALTER TABLE `testdb`.`tabledata` ADD COLUMN `" + name + "` VARCHAR(255) NULL DEFAULT NULL;";
+				
+				System.out.println(sql);
 			
 				int result = statement.executeUpdate(sql);
 			
@@ -690,6 +837,8 @@ public class DBHandler {
 
 	public void appendTableLine(String[] tableLineData, String name) {
 		
+		Date date = new Date();
+		
 		//add columnname section
 		ArrayList<String> columns = new ArrayList<String>();
 		try {
@@ -699,7 +848,6 @@ public class DBHandler {
 			ResultSetMetaData md = set.getMetaData();
 			for (int i=2; i<=md.getColumnCount(); i++)
 			{
-			    System.out.println("columnLabel: " + md.getColumnLabel(i));
 			    columns.add(md.getColumnLabel(i));
 			}
 
@@ -732,6 +880,8 @@ public class DBHandler {
 			columns.remove(0);
 			columns.remove(0);
 			columns.remove(0);
+			columns.remove(0);
+			columns.remove(0);
 
 			for(int i = 0; i < columns.size(); i++){
 				if(columns.get(i).equals("Begründung")){
@@ -739,7 +889,6 @@ public class DBHandler {
 				}
 			}
 			
-			System.out.println("columns new size after removal: " + columns.size());
 			
 			String stoffString = "";
 			for(int i = 0; i < columns.size(); i++){
@@ -750,12 +899,9 @@ public class DBHandler {
 				}
 			}
 			
-			System.out.println("stoffstring final: " + stoffString);
-			
 		    String sql = "INSERT INTO testdb." + "`" + tableLineData[1] + "`" + columnLabelSqlString +
-	                     "VALUES ('" + tableLineData[4] + "','" + tableLineData[5] + "','" + name + "','" + stoffString + tableLineData[6] + "')"; 
+	                     "VALUES ('" + tableLineData[4] + "','" + tableLineData[5] + "','" + name + "','" + dateFormatDate.format(date) + "','" + dateFormatTime.format(date) + "','" + stoffString + tableLineData[6] + "')"; 
 			
-		    System.out.println("final SQL apenndline: " + sql);
 		    
 			int result = statement.executeUpdate(sql);
 			
@@ -765,7 +911,7 @@ public class DBHandler {
 		
 	}
 
-	public String generateTableDataString(String tableName) {
+	public String generateTableDataString(String tableName, String priviledge) {
 		
 		if(tableName.equals("userdata")){
 			tableName = "";
@@ -781,6 +927,26 @@ public class DBHandler {
 			message += tableName + "&&";
 		}
 		
+		//if priviledge != Admin, check for hidden substances and leave them out
+		ArrayList<String> hiddenSubstances = new ArrayList<String>();
+		if(!priviledge.equals("Admin")){
+			hiddenSubstances.add(tableName + "#Absendedatum");
+			hiddenSubstances.add(tableName + "#Absendeuhrzeit");
+			try {
+				Statement statement = con.createStatement();
+				//System.out.println(tableName);
+				ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "hiddendata" + "`");
+			    while(set.next()){
+			    	if(set.getString("substances") != null){
+			    		hiddenSubstances.add(set.getString("substances"));
+			    	}
+			    }
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		//add columnname section
 		ArrayList<String> columns = new ArrayList<String>();
 		try {
@@ -789,14 +955,24 @@ public class DBHandler {
 			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + tableName + "`");
 			
 			ResultSetMetaData md = set.getMetaData();
-			for (int i=2; i<=md.getColumnCount(); i++)
+			for (int i=1; i<=md.getColumnCount(); i++)
 			{
-				if(i != 2){
-					message += "*";
-				}
-			    System.out.println(md.getColumnLabel(i));
-			    message += md.getColumnLabel(i);
-			    columns.add(md.getColumnLabel(i));
+			    
+			    if(hiddenSubstances.size() > 0){
+			    	if(!hiddenSubstances.contains(tableName + "#" + md.getColumnLabel(i))){
+						if(i != 1){
+							message += "*";
+						}
+						message += md.getColumnLabel(i);
+				    	columns.add(md.getColumnLabel(i));
+			    	}
+			    }else{
+					if(i != 1){
+						message += "*";
+					}
+					message += md.getColumnLabel(i);
+			    	columns.add(md.getColumnLabel(i));
+			    }
 			}
 
 			
@@ -828,7 +1004,6 @@ public class DBHandler {
 			e.printStackTrace();
 		}
 		
-		System.out.println("finalmsg tabledata: " + message);
 		return message;
 	}
 
@@ -877,7 +1052,7 @@ public class DBHandler {
 	
 	public void deleteUserData(String username){
 		
-		System.out.println("userdatadeletition triggered!");
+		System.out.println("userdatadelete triggered!");
 		
 		try {
 			Statement statement = con.createStatement();
@@ -1026,5 +1201,422 @@ public class DBHandler {
     	return message;
     	
     }
+    
+    //for future reference but core
+    public boolean addSubstance(String command){
+    	
+    	/*
+    	 * data[0] = !substancadd
+    	 * data[1] = tablename in folder#name format
+    	 * data[2] = substance name
+    	 * data[3] = after this substance
+    	 */
+    	String[] data = command.split(" ");
+    	
+    	boolean accepted = false;
+    	
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "ALTER TABLE `testdb`.`" + data[1] + "` add COLUMN `" + data[2] + "` VARCHAR(255) NULL DEFAULT ' ' " + "AFTER `" + data[3] + "`;";
+			
+			int result = statement.executeUpdate(sql);
+			
+			accepted = true;
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    }
+    
+    //core
+    public boolean renameSubstance(String command){
+    	
+    	/*
+    	 * data[0] = !substancerename
+    	 * data[1] = tablename in folder#name format
+    	 * data[2] = substance name
+    	 * data[3] = requested new substance name
+    	 */
+    	String[] data = command.split(" ");
+    	
+    	boolean accepted = false;
+    	
+		try {
+			Statement statement = con.createStatement();
+		
+			String sql = "ALTER TABLE `testdb`.`" + data[1] + "` CHANGE COLUMN `" + data[2] + "` `" + data[3] + "` VARCHAR(255) NULL DEFAULT NULL;";
+		
+			int result = statement.executeUpdate(sql);
+			
+			accepted = true;
+		
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	return accepted;
+    	
+    }
+    
+    //core - might replace -delete for good
+    public boolean hideSubstance(String command){
+    	
+    	//when hiding substances, consider hide table implementation - extra table hiddenData?
+    	
+    	/*
+    	 * data[0] = !substancehide
+    	 * data[1] = tablename in folder#name format
+    	 * data[2] = substance name
+    	 */
+    	String[] data = command.split(" ");
+    	
+    	boolean accepted = false;
+    	
+    	boolean isHidden = false;
+    	
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "hiddendata" + "`");
+		    while(set.next()){
+		    	if(set.getString("substances") != null){
+		    		if(set.getString("substances").equals(data[1] + "#" + data[2])){
+		    			isHidden = true;
+		    		}
+		    	}
+		    }
+
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	
+    	//if substance isnt in hidden table
+    	if(!isHidden){
+    		try {
+    			Statement statement = con.createStatement();
+    		
+    			String sql = "INSERT INTO testdb.hiddendata(`" + "substances" + "`) " + "VALUES ('" + data[1] + "#" + data[2] + "')"; 
+    			
+    			int result = statement.executeUpdate(sql);
+    			
+    			accepted = true;
+    		
+    		} catch (SQLException e) {
+    			e.printStackTrace();
+    		}
+    	}else{
+    		try {
+    			Statement statement = con.createStatement();
+    		
+    			String sql = "UPDATE testdb.hiddendata " +
+    						 "SET " + "`" + "substances" + "`" +
+    						 " = " +  "NULL"  +
+    						 " WHERE " + "`" + "substances" + "`" +
+    						 " = " + "'" + data[1] + "#" + data[2] + "'"; 
+    			
+    		
+    			int result = statement.executeUpdate(sql);
+    			
+    		accepted = true;
+    		
+    		} catch (SQLException e) {
+    			e.printStackTrace();
+    		}
+    	}
+    	
+    	return accepted;
+    	
+    	//return successvar - bool or string?
+    }
+    
+    public boolean hideTable(String command){
+    	
+    	//when hiding substances, consider hide table implementation - extra table hiddenData?
+    	
+    	/*
+    	 * data[0] = !tablehide
+    	 * data[1] = tablename in folder#name format
+    	 */
+    	String[] data = command.split(" ");
+    	
+    	boolean accepted = false;
+    	
+    	boolean isHidden = false;
+    	
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "hiddendata" + "`");
+		    while(set.next()){
+		    	if(set.getString("tables") != null){
+		    		if(set.getString("tables").equals(data[1])){
+		    			isHidden = true;
+		    		}
+		    	}
+		    }
+
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	
+    	//if substance isnt in hidden table
+    	if(!isHidden){
+    		try {
+    			Statement statement = con.createStatement();
+    		
+    			String sql = "INSERT INTO testdb.hiddendata(`" + "tables" + "`) " + "VALUES ('" + data[1] + "')"; 
+    			
+    			int result = statement.executeUpdate(sql);
+    			
+    			accepted = true;
+    		
+    		} catch (SQLException e) {
+    			e.printStackTrace();
+    		}
+    	}else{
+    		try {
+    			Statement statement = con.createStatement();
+    		
+    			String sql = "UPDATE testdb.hiddendata " +
+    						 "SET " + "`" + "tables" + "`" +
+    						 " = " +  "NULL"  +
+    						 " WHERE " + "`" + "tables" + "`" +
+    						 " = " + "'" + data[1] + "'"; 
+    		
+    			int result = statement.executeUpdate(sql);
+    			
+    		accepted = true;
+    		
+    		} catch (SQLException e) {
+    			e.printStackTrace();
+    		}
+    	}
+    	
+    	return accepted;
+    	
+    	//return successvar - bool or string?
+    }
+    
+    //questionable to use at all. using hiding instead prevents possible dataloss on errors- wether human or technical.
+    public void deleteSubstance(String command){
+    	
+    	
+    	//return successvar - bool or sting?
+    }
+    
+    //not core but essential feature
+    public void moveSubstance(String command){
+    	
+    	/*
+    	 * data[0] = !substancemove
+    	 * data[1] = tablename in folder#name format
+    	 * data[2] = substance name
+    	 * data[3] = after this substance
+    	 */
+    	String[] data = command.split(" ");
+    	
+    	boolean accepted = false;
+    	
+    	boolean isHidden = false;
+    	
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			int result = statement.executeUpdate("ALTER TABLE `testdb`.`" + data[1] + "` CHANGE COLUMN `" + data[2] + "` `" + data[2] + "` VARCHAR(255) NULL DEFAULT ' ' AFTER `" + data[3] + "`;");
+			
+			
+
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+    	//return bool true/false
+    }
+
+	public String createHiddenDataString() {
+		String string = new String("!hiddenData");
+		
+		ArrayList<String> hiddenTables = new ArrayList<String>();
+		ArrayList<String> hiddenSubstances = new ArrayList<String>();
+		
+		try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "hiddendata" + "`");
+		    while(set.next()){
+		    	if(set.getString("substances") != null){
+		    		hiddenSubstances.add(set.getString("substances"));
+		    	}
+		    }
+		    set.beforeFirst();
+		    while(set.next()){
+		    	if(set.getString("tables") != null){
+		    		hiddenTables.add(set.getString("tables"));
+		    	}
+		    }
+
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		for(int i = 0; i < hiddenTables.size(); i++){
+			string += " " + hiddenTables.get(i);
+		}
+		string += " %";
+		
+		for(int i = 0; i < hiddenSubstances.size(); i++){
+			string += " " + hiddenSubstances.get(i);
+		}
+		
+		return string;
+	}
+	
+	public boolean moveTable(String command){
+		boolean success = true;
+		
+		/*
+		 * data[0] = !tableMove
+		 * data[1] = tablename
+		 * data[2] = aftertable
+		 */
+		String[] data = command.split(" ");
+		
+		//find ID of AFTERtable, =0 when aftertable=START
+		
+		int idAftertable = 0;
+		
+		if(data[2].equals("START")){
+			
+		}else{
+			
+			try {
+				Statement statement = con.createStatement();
+				//System.out.println(tableName);
+				ResultSet set = statement.executeQuery("SELECT * FROM testdb.`" + "tabledata" + "`");
+			    while(set.next()){
+			    	if(set.getString(data[1].split("#")[0]) != null){
+			    		
+				    	if(set.getString(data[1].split("#")[0]).toLowerCase().equals(data[2].split("#")[1])){
+				    		idAftertable = Integer.parseInt(set.getString("ID"));
+				    	}
+			    		
+			    	}
+			    }
+
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
+		
+		//ID+1 for all > aftertable,
+		String sql = "UPDATE testdb.tabledata SET ID = ID + 1 where ID > " + idAftertable +" ORDER BY ID DESC;";
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			int result = statement.executeUpdate(sql);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+		//update old table cell with NULL
+		
+		String sql3 = "UPDATE `testdb`.`tabledata` SET `" + data[1].split("#")[0] + "`=NULL WHERE `" + data[1].split("#")[0] + "`='" + data[1].split("#")[1] + "';";
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			int result = statement.executeUpdate(sql3);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		//insert table with ID = aftertable+1
+		String sql2 = "INSERT INTO testdb.tabledata (ID, " + data[1].split("#")[0] + ") VALUES ('" + (idAftertable+1) + "', '" + data[1].split("#")[1] + "'); ";
+    	try {
+			Statement statement = con.createStatement();
+			//System.out.println(tableName);
+			int result = statement.executeUpdate(sql2);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+    	
+		return success;
+	}
+	
+	/**
+	 * @param String command - command will be splitted by regex "&" and to sue the following String array:
+	 * 
+	 * data[0] = !deleteLine
+	 * data[1] = tablename
+	 * data[2] = ID of line
+	 * 
+	 * @return boolean success - TRUE, if method executed without errors.
+	 */
+	public boolean deleteLine(String command){
+		boolean success = true;
+		
+		String data[] = command.split("&");
+		
+		String sql2 = "DELETE FROM `testdb`.`" + data[1] +"` WHERE `ID`='" + data[2] + "';";
+    	try {
+			Statement statement = con.createStatement();
+			int result = statement.executeUpdate(sql2);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return success;
+	}
+	
+	/**
+	 * @param String command - command will be splitted by regex "&" and to sue the following String array:
+	 * 
+	 * data[0] = !deleteLine
+	 * data[1] = tablename
+	 * data[2] = ID of line
+	 * data[3] = begründung
+	 * data[4] = requestinguser
+	 * 
+	 * @return boolean success - TRUE, if method executed without errors.
+	 */
+	public boolean requestDeleteLine(String command){
+		boolean success = true;
+		
+		String data[] = command.split("&");
+		
+		String sql2 = "INSERT INTO testdb.deletedata (tablename, identification, begrundung, requestinguser) VALUES ('" + data[1] + "', '" + data[2] + "', '" + data[3] + "', '" + data[4] + "'); ";
+    	try {
+			Statement statement = con.createStatement();
+			int result = statement.executeUpdate(sql2);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return success;
+	}
+	
+	public boolean appendToHistory(String[] data){
+		boolean success = true;
+		
+		
+		
+		return success;
+	}
 
 }
